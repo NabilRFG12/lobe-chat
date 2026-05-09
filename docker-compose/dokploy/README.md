@@ -8,12 +8,12 @@ Use this Compose file when deploying the fork from GitHub in Dokploy.
 - Compose type: Docker Compose, not Stack
 - Compose path: `docker-compose/dokploy/docker-compose.yml`
 - Domain mappings:
-  - `https://nabiler.com` -> service `lobe`, port `3210`
-  - `https://s3.nabiler.com` -> service `rustfs`, port `9000`
-  - Optional admin UI: `https://s3-ui.nabiler.com` -> service `rustfs`, port `9001`
+  - `https://lobe.nabiler.com` -> service `lobe`, port `3210`
+  - `https://files.nabiler.com` -> service `rustfs`, port `9000`
+  - Optional admin UI: `https://files-ui.nabiler.com` -> service `rustfs`, port `9001`
 
-Create DNS `A` records for `nabiler.com`, `s3.nabiler.com`, and optionally
-`s3-ui.nabiler.com`, all pointing to the Hetzner VPS running Dokploy.
+Create DNS `A` records for `lobe.nabiler.com`, `files.nabiler.com`, and optionally
+`files-ui.nabiler.com`, all pointing to the Hetzner VPS running Dokploy.
 
 ## Environment
 
