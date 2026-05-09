@@ -22,6 +22,10 @@ the placeholder secrets. Dokploy writes environment values to a `.env` file next
 to the Compose file, and this Compose file uses `env_file: .env` for runtime
 injection.
 
+Set `OPENROUTER_API_KEY` in Dokploy to enable OpenRouter as the server-side model
+provider. `OPENROUTER_MODEL_LIST` is optional; leave it unset to use the built-in
+model list.
+
 Keep Postgres and Redis private. This Compose file does not publish their ports
 to the host; only Dokploy domain routing should expose `lobe` and `rustfs`.
 
