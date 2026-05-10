@@ -100,6 +100,7 @@ services:
       rustfs:
         condition: service_healthy
     environment:
+      APP_URL: ${APP_URL}
       RUSTFS_ACCESS_KEY: ${RUSTFS_ACCESS_KEY}
       RUSTFS_SECRET_KEY: ${RUSTFS_SECRET_KEY}
       RUSTFS_LOBE_BUCKET: ${RUSTFS_LOBE_BUCKET}
@@ -109,9 +110,26 @@ services:
         set -eu
         POLICY='\''{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":["*"]},"Action":["s3:GetObject"],"Resource":["arn:aws:s3:::'\''"$${RUSTFS_LOBE_BUCKET}"'\''/*"]}]}'\''
         printf "%s\n" "$${POLICY}" > /tmp/bucket-policy.json
+        printf "%s\n" \
+          "<CORSConfiguration xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\">" \
+          "<CORSRule>" \
+          "<AllowedOrigin>$${APP_URL}</AllowedOrigin>" \
+          "<AllowedMethod>GET</AllowedMethod>" \
+          "<AllowedMethod>PUT</AllowedMethod>" \
+          "<AllowedMethod>POST</AllowedMethod>" \
+          "<AllowedMethod>DELETE</AllowedMethod>" \
+          "<AllowedMethod>HEAD</AllowedMethod>" \
+          "<AllowedHeader>*</AllowedHeader>" \
+          "<ExposeHeader>ETag</ExposeHeader>" \
+          "<ExposeHeader>x-amz-request-id</ExposeHeader>" \
+          "<ExposeHeader>x-amz-id-2</ExposeHeader>" \
+          "<MaxAgeSeconds>3000</MaxAgeSeconds>" \
+          "</CORSRule>" \
+          "</CORSConfiguration>" > /tmp/bucket-cors.xml
         mc alias set rustfs "http://rustfs:9000" "$${RUSTFS_ACCESS_KEY}" "$${RUSTFS_SECRET_KEY}"
         mc mb "rustfs/$${RUSTFS_LOBE_BUCKET}" --ignore-existing
         mc anonymous set-json /tmp/bucket-policy.json "rustfs/$${RUSTFS_LOBE_BUCKET}"
+        mc cors set "rustfs/$${RUSTFS_LOBE_BUCKET}" /tmp/bucket-cors.xml
       '
     restart: "no"
     networks:
