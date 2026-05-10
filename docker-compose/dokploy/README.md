@@ -1,6 +1,8 @@
 # Dokploy Deployment
 
 Use this Compose file when deploying the fork from GitHub in Dokploy.
+The app image is built in GitHub Actions and published to GitHub Container
+Registry, so Dokploy only pulls and runs the image on the VPS.
 
 ## Dokploy Settings
 
@@ -8,12 +10,12 @@ Use this Compose file when deploying the fork from GitHub in Dokploy.
 - Compose type: Docker Compose, not Stack
 - Compose path: `docker-compose/dokploy/docker-compose.yml`
 - Domain mappings:
-  - `https://nabiler.com` -> service `lobe`, port `3210`
-  - `https://s3.nabiler.com` -> service `rustfs`, port `9000`
-  - Optional admin UI: `https://s3-ui.nabiler.com` -> service `rustfs`, port `9001`
+  - `https://lobe.nabiler.com` -> service `lobe`, port `3210`
+  - `https://files.nabiler.com` -> service `rustfs`, port `9000`
+  - Optional admin UI: `https://files-ui.nabiler.com` -> service `rustfs`, port `9001`
 
-Create DNS `A` records for `nabiler.com`, `s3.nabiler.com`, and optionally
-`s3-ui.nabiler.com`, all pointing to the Hetzner VPS running Dokploy.
+Create DNS `A` records for `lobe.nabiler.com`, `files.nabiler.com`, and optionally
+`files-ui.nabiler.com`, all pointing to the Hetzner VPS running Dokploy.
 
 ## Environment
 
@@ -22,11 +24,21 @@ the placeholder secrets. Dokploy writes environment values to a `.env` file next
 to the Compose file, and this Compose file uses `env_file: .env` for runtime
 injection.
 
+Set `OPENROUTER_API_KEY` in Dokploy to enable OpenRouter as the server-side model
+provider. `OPENROUTER_MODEL_LIST` is optional; leave it unset to use the built-in
+model list.
+
+`LOBE_IMAGE` defaults to `ghcr.io/nabilrfg12/lobe-chat:latest`. The GitHub
+Actions workflow `.github/workflows/dokploy-docker-image.yml` publishes that tag
+when changes land on `next`, and can also be run manually from GitHub Actions.
+If Dokploy cannot pull the image, make the GHCR package public or add GitHub
+Container Registry credentials in Dokploy with `read:packages` access.
+
 Keep Postgres and Redis private. This Compose file does not publish their ports
 to the host; only Dokploy domain routing should expose `lobe` and `rustfs`.
 
 ## Updating
 
 Push changes to the configured GitHub branch and trigger a Dokploy deployment.
-The `lobe` image is built from this repository's root `Dockerfile`, so future
-theme or code changes in the fork are included in deployments.
+The `lobe` service pulls the GitHub Actions-built image, so future theme or code
+changes in the fork are included after the image workflow completes.

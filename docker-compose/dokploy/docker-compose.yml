@@ -2,19 +2,8 @@ name: lobehub
 
 services:
   lobe:
-    build:
-      context: ../..
-      dockerfile: Dockerfile
-      args:
-        FEATURE_FLAGS: ${FEATURE_FLAGS:-}
-        NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-}
-        NEXT_PUBLIC_ANALYTICS_POSTHOG: ${NEXT_PUBLIC_ANALYTICS_POSTHOG:-}
-        NEXT_PUBLIC_POSTHOG_HOST: ${NEXT_PUBLIC_POSTHOG_HOST:-}
-        NEXT_PUBLIC_POSTHOG_KEY: ${NEXT_PUBLIC_POSTHOG_KEY:-}
-        NEXT_PUBLIC_ANALYTICS_UMAMI: ${NEXT_PUBLIC_ANALYTICS_UMAMI:-}
-        NEXT_PUBLIC_UMAMI_SCRIPT_URL: ${NEXT_PUBLIC_UMAMI_SCRIPT_URL:-}
-        NEXT_PUBLIC_UMAMI_WEBSITE_ID: ${NEXT_PUBLIC_UMAMI_WEBSITE_ID:-}
-        NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:-}
+    image: ${LOBE_IMAGE:-ghcr.io/nabilrfg12/lobe-chat:latest}
+    pull_policy: always
     depends_on:
       postgresql:
         condition: service_healthy
