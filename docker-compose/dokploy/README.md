@@ -27,9 +27,10 @@ Set `OPENROUTER_API_KEY` in Dokploy to enable OpenRouter as the server-side mode
 provider. `OPENROUTER_MODEL_LIST` is optional; leave it unset to use the built-in
 model list.
 
-`LOBE_IMAGE` defaults to `ghcr.io/nabilrfg12/lobe-chat:latest`. The GitHub
-Actions workflow `.github/workflows/dokploy-docker-image.yml` publishes that tag
-when changes land on `next`, and can also be run manually from GitHub Actions.
+Use `LOBE_IMAGE=ghcr.io/nabilrfg12/lobe-chat:dokploy-self-hosting` while Dokploy
+is deploying the `codex/dokploy-compose-ports` branch. The GitHub Actions
+workflow `.github/workflows/dokploy-docker-image.yml` publishes that branch tag
+from this branch, and publishes `latest` only when changes land on `next`.
 If Dokploy cannot pull the image, make the GHCR package public or add GitHub
 Container Registry credentials in Dokploy with `read:packages` access.
 

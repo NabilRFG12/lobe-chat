@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - next
+      - codex/dokploy-compose-ports
   workflow_dispatch: {}
 
 concurrency:
@@ -42,6 +43,7 @@ jobs:
           images: ${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=latest,enable=${{ github.ref_name == 'next' }}
+            type=raw,value=dokploy-self-hosting,enable=${{ github.ref_name == 'codex/dokploy-compose-ports' }}
             type=sha,prefix=sha-
 
       - name: Build and push

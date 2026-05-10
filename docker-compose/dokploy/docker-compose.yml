@@ -2,7 +2,7 @@ name: lobehub
 
 services:
   lobe:
-    image: ${LOBE_IMAGE:-ghcr.io/nabilrfg12/lobe-chat:latest}
+    image: ${LOBE_IMAGE:-ghcr.io/nabilrfg12/lobe-chat:dokploy-self-hosting}
     pull_policy: always
     depends_on:
       postgresql:
