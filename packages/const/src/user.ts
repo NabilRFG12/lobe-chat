@@ -7,6 +7,10 @@ import type { UserPreference } from '@lobechat/types';
  */
 export const CURRENT_ONBOARDING_VERSION = 1;
 
+// Disabled for the self-hosted fork for now. Keep the onboarding implementation
+// in place so it can be re-enabled later by flipping this switch.
+export const ONBOARDING_ENABLED = false;
+
 export const DEFAULT_PREFERENCE: UserPreference = {
   guide: {
     moveSettingsToAvatar: true,
