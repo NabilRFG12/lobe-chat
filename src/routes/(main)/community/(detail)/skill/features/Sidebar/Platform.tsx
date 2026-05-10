@@ -195,16 +195,16 @@ const Platform = memo<PlatformProps>(
 
     const agentPrompt = `Curl https://lobehub.com/skills/${identifier}/skill.md, then follow the instructions to set up LobeHub Skills Marketplace and install the skill. Once installed, read the SKILL.md file in the installed directory and follow its instructions to complete the task.`;
 
-    const handleUseOnLobeAI = useCallback(() => {
+    const handleUseOnAGENT = useCallback(() => {
       if (!inboxAgentId) return;
 
-      // Send message to LobeAI
+      // Send message to AGENT
       sendMessage({
         context: { agentId: inboxAgentId },
         message: agentPrompt,
       });
 
-      // Navigate to LobeAI chat session
+      // Navigate to AGENT chat session
       navigate(SESSION_CHAT_URL(inboxAgentId, mobile));
     }, [agentPrompt, inboxAgentId, mobile, navigate, sendMessage]);
 
@@ -257,7 +257,7 @@ const Platform = memo<PlatformProps>(
                 icon={<Avatar avatar={DEFAULT_INBOX_AVATAR} size={18} />}
                 size={'large'}
                 type={'primary'}
-                onClick={handleUseOnLobeAI}
+                onClick={handleUseOnAGENT}
               >
                 {t('skills.details.sidebar.agent.useOnLobeAI')}
               </Button>

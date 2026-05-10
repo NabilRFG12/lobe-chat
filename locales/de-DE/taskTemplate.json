@@ -3,7 +3,7 @@
   "action.connect.error": "Verbindung fehlgeschlagen, bitte versuchen Sie es erneut.",
   "action.connect.popupBlocked": "Verbindungspopup blockiert. Erlauben Sie Popups in Ihrem Browser, um fortzufahren.",
   "action.create.error": "Aufgabe konnte nicht erstellt werden. Bitte versuchen Sie es erneut.",
-  "action.create.success": "Geplante Aufgabe hinzugefügt. Finden Sie sie in Lobe AI.",
+  "action.create.success": "Geplante Aufgabe hinzugefügt. Finden Sie sie in AGENT.",
   "action.createButton": "Aufgabe hinzufügen",
   "action.creating": "Erstellen...",
   "action.dismiss.error": "Konnte nicht verworfen werden. Bitte versuchen Sie es erneut.",
