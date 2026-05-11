@@ -324,13 +324,13 @@ export const messengerRouter = router({
    * Agent list for the verify-im UI's "pick an initial agent" dropdown.
    *
    * Excludes virtual agents (page-copilot, etc.) but explicitly keeps the
-   * inbox/LobeAI agent — historical inbox sessions get migrated with
-   * `virtual=true`, so a plain virtual filter would hide LobeAI even though
+   * inbox/AGENT agent — historical inbox sessions get migrated with
+   * `virtual=true`, so a plain virtual filter would hide AGENT even though
    * the home sidebar shows it (sidebar fetches it separately via
    * `agent.getBuiltinAgent`).
    *
    * Order matches the home sidebar (`updatedAt DESC`). Title fallback for the
-   * inbox agent resolves to `"LobeAI"` + default avatar; everything else falls
+   * inbox agent resolves to `"AGENT"` + default avatar; everything else falls
    * back on the client via `common.defaultSession`.
    */
   listAgentsForBinding: messengerProcedure.query(async ({ ctx }) => {
@@ -358,10 +358,10 @@ export const messengerRouter = router({
         backgroundColor: row.backgroundColor,
         id: row.id,
         slug: row.slug,
-        title: row.title || (row.slug === INBOX_SESSION_ID ? 'LobeAI' : null),
+        title: row.title || (row.slug === INBOX_SESSION_ID ? 'AGENT' : null),
       }));
 
-    // Pin the inbox/LobeAI agent to the top regardless of updatedAt — it's the
+    // Pin the inbox/AGENT agent to the top regardless of updatedAt — it's the
     // implicit "default" agent and should always be the first option.
     const inboxIdx = mapped.findIndex((row) => row.slug === INBOX_SESSION_ID);
     if (inboxIdx > 0) {

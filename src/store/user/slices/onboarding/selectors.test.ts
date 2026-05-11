@@ -1,4 +1,4 @@
-import { CURRENT_ONBOARDING_VERSION } from '@lobechat/const';
+import { CURRENT_ONBOARDING_VERSION, ONBOARDING_ENABLED } from '@lobechat/const';
 import { MAX_ONBOARDING_STEPS } from '@lobechat/types';
 import { describe, expect, it } from 'vitest';
 
@@ -163,12 +163,20 @@ describe('onboardingSelectors', () => {
   });
 
   describe('needsOnboarding', () => {
+    it('should return false when onboarding is disabled', () => {
+      const store = {
+        onboarding: { version: CURRENT_ONBOARDING_VERSION },
+      } as Pick<UserStore, 'onboarding'>;
+
+      expect(onboardingSelectors.needsOnboarding(store)).toBe(false);
+    });
+
     it('should return true when finishedAt is not set', () => {
       const store = {
         onboarding: { version: CURRENT_ONBOARDING_VERSION },
       } as Pick<UserStore, 'onboarding'>;
 
-      expect(onboardingSelectors.needsOnboarding(store)).toBe(true);
+      expect(onboardingSelectors.needsOnboarding(store)).toBe(ONBOARDING_ENABLED);
     });
 
     it('should return true when version is older than current', () => {
@@ -182,7 +190,7 @@ describe('onboardingSelectors', () => {
           },
         } as Pick<UserStore, 'onboarding'>;
 
-        expect(onboardingSelectors.needsOnboarding(store)).toBe(true);
+        expect(onboardingSelectors.needsOnboarding(store)).toBe(ONBOARDING_ENABLED);
       } else {
         // When CURRENT_ONBOARDING_VERSION is 1, there's no valid older version (0 is falsy)
         // Test that version 0 is treated as NOT needing onboarding due to falsy check
@@ -216,7 +224,7 @@ describe('onboardingSelectors', () => {
         onboarding: undefined,
       } as Pick<UserStore, 'onboarding'>;
 
-      expect(onboardingSelectors.needsOnboarding(store)).toBe(true);
+      expect(onboardingSelectors.needsOnboarding(store)).toBe(ONBOARDING_ENABLED);
     });
   });
 

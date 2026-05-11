@@ -2,7 +2,7 @@ name: lobehub
 
 services:
   lobe:
-    image: ${LOBE_IMAGE:-ghcr.io/nabilrfg12/lobe-chat:latest}
+    image: ${LOBE_IMAGE:-ghcr.io/nabilrfg12/lobe-chat:dokploy-self-hosting}
     pull_policy: always
     depends_on:
       postgresql:
@@ -13,14 +13,14 @@ services:
         condition: service_healthy
       rustfs-init:
         condition: service_completed_successfully
-    env_file:
-      - .env
     environment:
       APP_URL: ${APP_URL}
       INTERNAL_APP_URL: ${INTERNAL_APP_URL:-http://localhost:3210}
       KEY_VAULTS_SECRET: ${KEY_VAULTS_SECRET}
       AUTH_SECRET: ${AUTH_SECRET}
       AUTH_TRUSTED_ORIGINS: ${AUTH_TRUSTED_ORIGINS:-${APP_URL}}
+      AUTH_ALLOWED_EMAILS: ${AUTH_ALLOWED_EMAILS:-}
+      AUTH_DISABLE_EMAIL_PASSWORD: ${AUTH_DISABLE_EMAIL_PASSWORD:-}
       JWKS_KEY: ${JWKS_KEY}
       DATABASE_DRIVER: node
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgresql:5432/${LOBE_DB_NAME}
@@ -35,12 +35,13 @@ services:
       S3_SECRET_ACCESS_KEY: ${RUSTFS_SECRET_KEY}
       S3_SET_ACL: 0
       LLM_VISION_IMAGE_USE_BASE64: 1
-      SEARXNG_URL: http://searxng:8080
-    expose:
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MODEL_LIST: ${OPENROUTER_MODEL_LIST:-}
+    ports:
       - "3210"
     restart: unless-stopped
     networks:
-      - lobe-network
+      - dokploy-network
 
   postgresql:
     image: paradedb/paradedb:latest-pg17
@@ -56,7 +57,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - lobe-network
+      - dokploy-network
 
   redis:
     image: redis:7-alpine
@@ -70,7 +71,7 @@ services:
     volumes:
       - redis_data:/data
     networks:
-      - lobe-network
+      - dokploy-network
 
   rustfs:
     image: rustfs/rustfs:latest
@@ -79,7 +80,7 @@ services:
       RUSTFS_ACCESS_KEY: ${RUSTFS_ACCESS_KEY}
       RUSTFS_CONSOLE_ENABLE: "true"
       RUSTFS_SECRET_KEY: ${RUSTFS_SECRET_KEY}
-    expose:
+    ports:
       - "9000"
       - "9001"
     healthcheck:
@@ -91,46 +92,52 @@ services:
     volumes:
       - rustfs_data:/data
     networks:
-      - lobe-network
+      - dokploy-network
 
   rustfs-init:
     image: minio/mc:latest
     depends_on:
       rustfs:
         condition: service_healthy
-    env_file:
-      - .env
+    environment:
+      APP_URL: ${APP_URL}
+      RUSTFS_ACCESS_KEY: ${RUSTFS_ACCESS_KEY}
+      RUSTFS_SECRET_KEY: ${RUSTFS_SECRET_KEY}
+      RUSTFS_LOBE_BUCKET: ${RUSTFS_LOBE_BUCKET}
     entrypoint: /bin/sh
     command: |
       -c '
         set -eu
         POLICY='\''{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":["*"]},"Action":["s3:GetObject"],"Resource":["arn:aws:s3:::'\''"$${RUSTFS_LOBE_BUCKET}"'\''/*"]}]}'\''
         printf "%s\n" "$${POLICY}" > /tmp/bucket-policy.json
+        printf "%s\n" \
+          "<CORSConfiguration xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\">" \
+          "<CORSRule>" \
+          "<AllowedOrigin>$${APP_URL}</AllowedOrigin>" \
+          "<AllowedMethod>GET</AllowedMethod>" \
+          "<AllowedMethod>PUT</AllowedMethod>" \
+          "<AllowedMethod>POST</AllowedMethod>" \
+          "<AllowedMethod>DELETE</AllowedMethod>" \
+          "<AllowedMethod>HEAD</AllowedMethod>" \
+          "<AllowedHeader>*</AllowedHeader>" \
+          "<ExposeHeader>ETag</ExposeHeader>" \
+          "<ExposeHeader>x-amz-request-id</ExposeHeader>" \
+          "<ExposeHeader>x-amz-id-2</ExposeHeader>" \
+          "<MaxAgeSeconds>3000</MaxAgeSeconds>" \
+          "</CORSRule>" \
+          "</CORSConfiguration>" > /tmp/bucket-cors.xml
         mc alias set rustfs "http://rustfs:9000" "$${RUSTFS_ACCESS_KEY}" "$${RUSTFS_SECRET_KEY}"
         mc mb "rustfs/$${RUSTFS_LOBE_BUCKET}" --ignore-existing
         mc anonymous set-json /tmp/bucket-policy.json "rustfs/$${RUSTFS_LOBE_BUCKET}"
+        mc cors set "rustfs/$${RUSTFS_LOBE_BUCKET}" /tmp/bucket-cors.xml
       '
     restart: "no"
     networks:
-      - lobe-network
-
-  searxng:
-    image: searxng/searxng:latest
-    environment:
-      BASE_URL: ${SEARXNG_BASE_URL:-http://searxng:8080/}
-      INSTANCE_NAME: ${SEARXNG_INSTANCE_NAME:-nabiler-lobehub}
-      SEARXNG_SETTINGS_FILE: /etc/searxng/settings.yml
-    expose:
-      - "8080"
-    volumes:
-      - ../deploy/searxng-settings.yml:/etc/searxng/settings.yml:ro
-    restart: unless-stopped
-    networks:
-      - lobe-network
+      - dokploy-network
 
 networks:
-  lobe-network:
-    driver: bridge
+  dokploy-network:
+    external: true
 
 volumes:
   postgres_data:

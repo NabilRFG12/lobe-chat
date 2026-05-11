@@ -3,7 +3,7 @@
   "action.connect.error": "فشل الاتصال، يرجى المحاولة مرة أخرى.",
   "action.connect.popupBlocked": "تم حظر نافذة الاتصال المنبثقة. اسمح بالنوافذ المنبثقة في متصفحك للمتابعة.",
   "action.create.error": "فشل في إنشاء المهمة. يرجى المحاولة مرة أخرى.",
-  "action.create.success": "تمت إضافة المهمة المجدولة. يمكنك العثور عليها في Lobe AI.",
+  "action.create.success": "تمت إضافة المهمة المجدولة. يمكنك العثور عليها في AGENT.",
   "action.createButton": "إضافة مهمة",
   "action.creating": "جاري الإنشاء...",
   "action.dismiss.error": "فشل في الإلغاء. يرجى المحاولة مرة أخرى.",

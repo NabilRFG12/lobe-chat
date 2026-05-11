@@ -1,13 +1,14 @@
 'use client';
 
 import { ORG_NAME, UTM_SOURCE } from '@lobechat/business-const';
-import { type FlexboxProps } from '@lobehub/ui';
+import type { FlexboxProps } from '@lobehub/ui';
 import { Flexbox } from '@lobehub/ui';
-import { LobeHub } from '@lobehub/ui/brand';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { memo } from 'react';
 
 import { isCustomORG } from '@/const/version';
+
+import { ProductLogo } from '../Branding';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   logoLink: css`
@@ -41,7 +42,7 @@ const BrandWatermark = memo<Omit<FlexboxProps, 'children'>>(({ style, ...rest })
           rel="noreferrer"
           target="_blank"
         >
-          <LobeHub size={20} type={'text'} />
+          <ProductLogo size={20} type={'flat'} />
         </a>
       )}
     </Flexbox>

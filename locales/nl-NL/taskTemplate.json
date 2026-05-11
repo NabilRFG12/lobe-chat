@@ -3,7 +3,7 @@
   "action.connect.error": "Verbinding mislukt, probeer het alstublieft opnieuw.",
   "action.connect.popupBlocked": "Verbindingspopup geblokkeerd. Sta pop-ups toe in uw browser om door te gaan.",
   "action.create.error": "Taak aanmaken mislukt. Probeer het opnieuw.",
-  "action.create.success": "Geplande taak toegevoegd. Vind het in Lobe AI.",
+  "action.create.success": "Geplande taak toegevoegd. Vind het in AGENT.",
   "action.createButton": "Taak toevoegen",
   "action.creating": "Bezig met aanmaken...",
   "action.dismiss.error": "Afwijzen mislukt. Probeer het opnieuw.",

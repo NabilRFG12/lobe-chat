@@ -20,22 +20,22 @@ Create DNS `A` records for `lobe.nabiler.com`, `files.nabiler.com`, and optional
 ## Environment
 
 Copy the variables from `.env.example` into Dokploy's Environment tab and replace
-the placeholder secrets. Dokploy writes environment values to a `.env` file next
-to the Compose file, and this Compose file uses `env_file: .env` for runtime
-injection.
+the placeholder secrets. The Compose file references the variables directly with
+`${VAR_NAME}` syntax so the deployment does not depend on an existing `.env` file.
 
 Set `OPENROUTER_API_KEY` in Dokploy to enable OpenRouter as the server-side model
 provider. `OPENROUTER_MODEL_LIST` is optional; leave it unset to use the built-in
 model list.
 
-`LOBE_IMAGE` defaults to `ghcr.io/nabilrfg12/lobe-chat:latest`. The GitHub
-Actions workflow `.github/workflows/dokploy-docker-image.yml` publishes that tag
-when changes land on `next`, and can also be run manually from GitHub Actions.
+Use `LOBE_IMAGE=ghcr.io/nabilrfg12/lobe-chat:dokploy-self-hosting` while Dokploy
+is deploying the `codex/dokploy-compose-ports` branch. The GitHub Actions
+workflow `.github/workflows/dokploy-docker-image.yml` publishes that branch tag
+from this branch, and publishes `latest` only when changes land on `next`.
 If Dokploy cannot pull the image, make the GHCR package public or add GitHub
 Container Registry credentials in Dokploy with `read:packages` access.
 
-Keep Postgres and Redis private. This Compose file does not publish their ports
-to the host; only Dokploy domain routing should expose `lobe` and `rustfs`.
+Keep Postgres and Redis private. Only `lobe` and `rustfs` declare Dokploy-style
+container ports for domain routing.
 
 ## Updating
 

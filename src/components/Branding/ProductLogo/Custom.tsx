@@ -1,14 +1,16 @@
 import { BRANDING_LOGO_URL, BRANDING_NAME } from '@lobechat/business-const';
-import { type IconType } from '@lobehub/icons';
-import { type FlexboxProps } from '@lobehub/ui';
+import type { IconType } from '@lobehub/icons';
+import type { FlexboxProps } from '@lobehub/ui';
 import { Flexbox } from '@lobehub/ui';
-import { type LobeChatProps } from '@lobehub/ui/brand';
+import type { LobeChatProps } from '@lobehub/ui/brand';
 import { createStaticStyles, cssVar } from 'antd-style';
-import { type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { memo } from 'react';
 
-import { type ImageProps } from '@/libs/next/Image';
+import type { ImageProps } from '@/libs/next/Image';
 import Image from '@/libs/next/Image';
+
+const DEFAULT_BRANDING_LOGO_URL = '/icons/icon-512x512.png';
 
 const styles = createStaticStyles(({ css }) => {
   return {
@@ -42,7 +44,7 @@ const CustomImageLogo = memo<Omit<ImageProps, 'alt' | 'src'> & { size: number }>
       <Image
         alt={BRANDING_NAME}
         height={size}
-        src={BRANDING_LOGO_URL}
+        src={BRANDING_LOGO_URL || DEFAULT_BRANDING_LOGO_URL}
         unoptimized={true}
         width={size}
         {...rest}
