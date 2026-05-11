@@ -1,8 +1,9 @@
 'use client';
 
-import { Avatar, Block, Flexbox, Tag, Text } from '@lobehub/ui';
-import { App, Empty, Input, Select, Space, Table } from 'antd';
+import { Avatar, Block, Button, Flexbox, Icon, Tag, Text } from '@lobehub/ui';
+import { App, Empty, Form, Input, Modal, Select, Space, Table } from 'antd';
 import type { TableColumnsType } from 'antd';
+import { Plus } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -30,6 +31,13 @@ interface UserRow {
   username?: string | null;
 }
 
+interface CreateUserFormValues {
+  email: string;
+  name?: string;
+  password: string;
+  roleIds?: string[];
+}
+
 const formatDate = (value?: Date | string | null) => {
   if (!value) return '-';
 
@@ -41,6 +49,8 @@ const UsersSetting = memo(() => {
   const { t } = useTranslation('setting');
   const utils = lambdaQuery.useUtils();
   const [keyword, setKeyword] = useState('');
+  const [createOpen, setCreateOpen] = useState(false);
+  const [form] = Form.useForm<CreateUserFormValues>();
 
   const { data: access, isLoading: isAccessLoading } =
     lambdaQuery.rbacAdmin.getCurrentPermissions.useQuery(undefined, {
@@ -73,18 +83,54 @@ const UsersSetting = memo(() => {
     },
   });
 
+  const createUser = lambdaQuery.rbacAdmin.createUser.useMutation({
+    onError: (error) => {
+      message.error(error.message);
+    },
+    onSuccess: async () => {
+      setCreateOpen(false);
+      form.resetFields();
+      await utils.rbacAdmin.listUsers.invalidate();
+      message.success('User created. Share the temporary password securely.');
+    },
+  });
+
   const roleOptions = useMemo(
     () =>
-      roles.map((role) => ({
-        label: role.displayName,
-        value: role.id,
-      })),
-    [roles],
+      roles
+        .filter((role) => access?.isEnvSuperAdmin || role.name !== 'super_admin')
+        .map((role) => ({
+          label: role.displayName,
+          value: role.id,
+        })),
+    [access?.isEnvSuperAdmin, roles],
   );
 
   const canAssignRoles =
     !!access?.isEnvSuperAdmin ||
     !!access?.permissions.includes(RBAC_PERMISSIONS.RBAC_USER_ROLE_UPDATE_ALL);
+  const canCreateUsers =
+    !!access?.isEnvSuperAdmin || !!access?.permissions.includes(RBAC_PERMISSIONS.USER_CREATE_ALL);
+
+  const defaultRoleId = useMemo(
+    () => roles.find((role) => role.name === 'agent_user')?.id,
+    [roles],
+  );
+
+  const handleOpenCreate = () => {
+    form.setFieldsValue({ roleIds: defaultRoleId ? [defaultRoleId] : [] });
+    setCreateOpen(true);
+  };
+
+  const handleCreate = async () => {
+    const values = await form.validateFields();
+    createUser.mutate({
+      email: values.email,
+      name: values.name,
+      password: values.password,
+      roleIds: values.roleIds,
+    });
+  };
 
   const columns: TableColumnsType<UserRow> = [
     {
@@ -158,7 +204,14 @@ const UsersSetting = memo(() => {
 
   return (
     <>
-      <SettingHeader title={t('tab.users')} />
+      <SettingHeader
+        title={t('tab.users')}
+        extra={
+          <Button disabled={!canCreateUsers} icon={<Icon icon={Plus} />} onClick={handleOpenCreate}>
+            Create user
+          </Button>
+        }
+      />
       <Block gap={16} padding={16} variant="outlined">
         <Flexbox gap={12}>
           <Input.Search
@@ -176,6 +229,51 @@ const UsersSetting = memo(() => {
           />
         </Flexbox>
       </Block>
+      <Modal
+        confirmLoading={createUser.isPending}
+        destroyOnHidden
+        okText="Create user"
+        open={createOpen}
+        title="Create user"
+        onCancel={() => setCreateOpen(false)}
+        onOk={handleCreate}
+      >
+        <Form form={form} layout="vertical">
+          <Form.Item
+            label="Email"
+            name="email"
+            rules={[
+              { message: 'Email is required.', required: true },
+              { message: 'Enter a valid email address.', type: 'email' },
+            ]}
+          >
+            <Input autoComplete="off" placeholder="employee@nabiler.com" />
+          </Form.Item>
+          <Form.Item label="Name" name="name">
+            <Input autoComplete="off" placeholder="Employee name" />
+          </Form.Item>
+          <Form.Item
+            extra="The employee can use this password on the sign-in page."
+            label="Temporary password"
+            name="password"
+            rules={[
+              { message: 'Password is required.', required: true },
+              { message: 'Use at least 8 characters.', min: 8 },
+              { max: 64, message: 'Use 64 characters or fewer.' },
+            ]}
+          >
+            <Input.Password autoComplete="new-password" placeholder="Minimum 8 characters" />
+          </Form.Item>
+          <Form.Item label="Roles" name="roleIds">
+            <Select
+              mode="multiple"
+              options={roleOptions}
+              placeholder="Select roles"
+              style={{ width: '100%' }}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
     </>
   );
 });

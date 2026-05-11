@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { asc, eq, ilike, inArray, or } from 'drizzle-orm';
 import { z } from 'zod';
 
+import { auth } from '@/auth';
 import { APP_PERMISSION_DEFINITIONS, APP_PERMISSIONS } from '@/const/appPermissions';
 import { RBAC_PERMISSIONS } from '@/const/rbac';
 import { RbacModel } from '@/database/models/rbac';
@@ -61,6 +62,17 @@ const DEFAULT_PERMISSIONS = [
 
 const SUPER_ADMIN_PERMISSIONS = DEFAULT_PERMISSIONS.map((permission) => permission.code);
 const isDefined = <T>(value: T | undefined): value is T => value !== undefined;
+
+const createUserInputSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .email()
+    .transform((value) => value.toLowerCase()),
+  name: z.string().trim().optional(),
+  password: z.string().min(8).max(64),
+  roleIds: z.array(z.string()).optional(),
+});
 
 const readOnlyPermissions = Object.values(RBAC_PERMISSIONS).filter((code) =>
   code.includes(':read:'),
@@ -272,6 +284,28 @@ const assignDefaultUserRole = async (db: LobeChatDatabase, userId: string) => {
   await db.insert(userRoles).values({ roleId: defaultRole.id, userId }).onConflictDoNothing();
 };
 
+const resolveNewUserRoleIds = async (db: LobeChatDatabase, roleIds?: string[]) => {
+  if (roleIds) {
+    const uniqueRoleIds = [...new Set(roleIds)];
+    if (uniqueRoleIds.length === 0) return [];
+
+    const selectedRoles = await db.query.roles.findMany({
+      where: inArray(roles.id, uniqueRoleIds),
+    });
+    if (selectedRoles.length !== uniqueRoleIds.length) {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'One or more roles do not exist' });
+    }
+
+    return uniqueRoleIds;
+  }
+
+  const defaultRole = await db.query.roles.findFirst({
+    where: eq(roles.name, DEFAULT_USER_ROLE),
+  });
+
+  return defaultRole ? [defaultRole.id] : [];
+};
+
 export const rbacAdminRouter = router({
   bootstrap: rbacProcedure.mutation(async ({ ctx }) => {
     await ensureDefaultRbac(ctx.serverDB);
@@ -330,6 +364,82 @@ export const rbacAdminRouter = router({
 
       return role;
     }),
+
+  createUser: rbacProcedure.input(createUserInputSchema).mutation(async ({ ctx, input }) => {
+    const currentUser = await requireAnyPermission(ctx.serverDB, ctx.rbacModel, ctx.userId, [
+      RBAC_PERMISSIONS.USER_CREATE_ALL,
+    ]);
+
+    const roleIds = await resolveNewUserRoleIds(ctx.serverDB, input.roleIds);
+    if (roleIds.length > 0) {
+      const selectedRoles = await ctx.serverDB.query.roles.findMany({
+        where: inArray(roles.id, roleIds),
+      });
+
+      if (
+        selectedRoles.some((role) => role.name === SUPER_ADMIN_ROLE) &&
+        !isEnvSuperAdmin(currentUser.email)
+      ) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only env super admins can create another Super Admin',
+        });
+      }
+    }
+
+    const existingUser = await ctx.serverDB.query.users.findFirst({
+      where: eq(users.email, input.email),
+    });
+    if (existingUser) {
+      throw new TRPCError({ code: 'CONFLICT', message: 'A user with this email already exists' });
+    }
+
+    const name = input.name || input.email.split('@')[0] || input.email;
+
+    try {
+      const result = await auth.api.createUser({
+        body: {
+          data: {
+            emailVerified: true,
+          },
+          email: input.email,
+          name,
+          password: input.password,
+          role: 'user',
+        },
+      });
+
+      const user = result.user;
+      if (!user?.id) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'User creation failed',
+        });
+      }
+
+      if (roleIds.length > 0) {
+        await ctx.rbacModel.updateUserRoles(user.id, roleIds);
+      }
+
+      return {
+        roleIds,
+        success: true,
+        user: {
+          email: user.email,
+          fullName: user.name,
+          id: user.id,
+        },
+      };
+    } catch (error) {
+      if (error instanceof TRPCError) throw error;
+      console.error('[rbacAdmin:createUser]', error);
+      throw new TRPCError({
+        cause: error,
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to create user',
+      });
+    }
+  }),
 
   deleteRole: rbacProcedure
     .input(z.object({ roleId: z.string() }))
@@ -495,7 +605,7 @@ export const rbacAdminRouter = router({
   updateUserRoles: rbacProcedure
     .input(z.object({ roleIds: z.array(z.string()), userId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      await requireAnyPermission(ctx.serverDB, ctx.rbacModel, ctx.userId, [
+      const currentUser = await requireAnyPermission(ctx.serverDB, ctx.rbacModel, ctx.userId, [
         RBAC_PERMISSIONS.RBAC_USER_ROLE_UPDATE_ALL,
       ]);
 
@@ -513,6 +623,19 @@ export const rbacAdminRouter = router({
           throw new TRPCError({
             code: 'BAD_REQUEST',
             message: 'Env super admin role cannot be removed',
+          });
+        }
+      }
+
+      if (!isEnvSuperAdmin(currentUser.email) && input.roleIds.length > 0) {
+        const selectedRoles = await ctx.serverDB.query.roles.findMany({
+          where: inArray(roles.id, input.roleIds),
+        });
+
+        if (selectedRoles.some((role) => role.name === SUPER_ADMIN_ROLE)) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Only env super admins can assign the Super Admin role',
           });
         }
       }
