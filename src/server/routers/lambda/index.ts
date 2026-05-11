@@ -52,6 +52,7 @@ import { notificationRouter } from './notification';
 import { oauthDeviceFlowRouter } from './oauthDeviceFlow';
 import { pluginRouter } from './plugin';
 import { ragEvalRouter } from './ragEval';
+import { rbacAdminRouter } from './rbacAdmin';
 import { recentRouter } from './recent';
 import { searchRouter } from './search';
 import { sessionRouter } from './session';
@@ -113,6 +114,7 @@ export const lambdaRouter = router({
   oauthDeviceFlow: oauthDeviceFlowRouter,
   plugin: pluginRouter,
   ragEval: ragEvalRouter,
+  rbacAdmin: rbacAdminRouter,
   recent: recentRouter,
   search: searchRouter,
   session: sessionRouter,

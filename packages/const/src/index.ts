@@ -1,3 +1,4 @@
+export * from './appPermissions';
 export * from './bot';
 export * from './currency';
 export * from './desktop';

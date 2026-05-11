@@ -8,10 +8,12 @@ import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 
+import { getNavRequiredPermissions } from '@/const/rbacPolicies';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import { useActiveTabKey } from '@/hooks/useActiveTabKey';
 import type { NavItem as NavItemType } from '@/hooks/useNavLayout';
 import { useNavLayout } from '@/hooks/useNavLayout';
+import { useRbacAccess } from '@/hooks/useRbacAccess';
 import Recents from '@/routes/(main)/home/features/Recents';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
@@ -62,6 +64,7 @@ const Body = memo(() => {
   const tab = useActiveTabKey();
   const navigate = useNavigate();
   const { topNavItems, bottomMenuItems } = useNavLayout();
+  const { canAccess } = useRbacAccess();
   const sidebarItems = useGlobalStore(systemStatusSelectors.sidebarItems);
   const sidebarExpandedKeys = useGlobalStore(systemStatusSelectors.sidebarExpandedKeys);
   const hiddenSections = useGlobalStore(systemStatusSelectors.hiddenSidebarSections);
@@ -103,8 +106,13 @@ const Body = memo(() => {
 
   // Items that must always be visible regardless of hiddenSections
   const isVisible = useCallback(
-    (k: string) => k === GroupKey.Agent || !hiddenSections.includes(k),
-    [hiddenSections],
+    (k: string) => {
+      const canOpenSection = canAccess(getNavRequiredPermissions(k), { allowWhileLoading: true });
+      if (!canOpenSection) return false;
+
+      return k === GroupKey.Agent || !hiddenSections.includes(k);
+    },
+    [canAccess, hiddenSections],
   );
 
   const visibleKeys = useMemo(
