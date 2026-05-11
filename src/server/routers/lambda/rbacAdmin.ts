@@ -2,14 +2,16 @@ import { TRPCError } from '@trpc/server';
 import { asc, eq, ilike, inArray, or } from 'drizzle-orm';
 import { z } from 'zod';
 
+import { APP_PERMISSION_DEFINITIONS, APP_PERMISSIONS } from '@/const/appPermissions';
 import { RBAC_PERMISSIONS } from '@/const/rbac';
 import { RbacModel } from '@/database/models/rbac';
 import { permissions, rolePermissions, roles, userRoles, users } from '@/database/schemas';
-import { type LobeChatDatabase } from '@/database/type';
+import type { LobeChatDatabase } from '@/database/type';
 import { authedProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 
 const SUPER_ADMIN_ROLE = 'super_admin';
+const DEFAULT_USER_ROLE = 'agent_user';
 
 const adminEmailAllowlist = () => {
   const explicit = process.env.APP_SUPER_ADMIN_EMAILS;
@@ -30,6 +32,7 @@ const DEFAULT_PERMISSIONS = [
     description: `Allows ${code}`,
     name: code,
   })),
+  ...APP_PERMISSION_DEFINITIONS,
   {
     category: 'community',
     code: 'community:view',
@@ -57,6 +60,7 @@ const DEFAULT_PERMISSIONS = [
 ] as const;
 
 const SUPER_ADMIN_PERMISSIONS = DEFAULT_PERMISSIONS.map((permission) => permission.code);
+const isDefined = <T>(value: T | undefined): value is T => value !== undefined;
 
 const readOnlyPermissions = Object.values(RBAC_PERMISSIONS).filter((code) =>
   code.includes(':read:'),
@@ -92,7 +96,7 @@ const DEFAULT_ROLES = [
     displayName: 'Admin',
     isSystem: true,
     name: 'admin',
-    permissions: Object.values(RBAC_PERMISSIONS).filter(
+    permissions: SUPER_ADMIN_PERMISSIONS.filter(
       (code) => !code.startsWith('rbac:permission_delete'),
     ),
   },
@@ -100,15 +104,32 @@ const DEFAULT_ROLES = [
     description: 'Can use chat, own agents, uploads, tasks, and personal resources.',
     displayName: 'Agent User',
     isSystem: true,
-    name: 'agent_user',
-    permissions: chatUserPermissions,
+    name: DEFAULT_USER_ROLE,
+    permissions: [
+      ...chatUserPermissions,
+      APP_PERMISSIONS.CHAT,
+      APP_PERMISSIONS.COMMUNITY,
+      APP_PERMISSIONS.IMAGE_GENERATION,
+      APP_PERMISSIONS.MEMORY,
+      APP_PERMISSIONS.PAGES,
+      APP_PERMISSIONS.RESOURCE,
+      APP_PERMISSIONS.TASKS,
+      APP_PERMISSIONS.VIDEO_GENERATION,
+    ],
   },
   {
     description: 'Read-only access to owned app content.',
     displayName: 'Viewer',
     isSystem: true,
     name: 'viewer',
-    permissions: readOnlyPermissions,
+    permissions: [
+      ...readOnlyPermissions,
+      APP_PERMISSIONS.CHAT,
+      APP_PERMISSIONS.COMMUNITY,
+      APP_PERMISSIONS.MEMORY,
+      APP_PERMISSIONS.PAGES,
+      APP_PERMISSIONS.RESOURCE,
+    ],
   },
   {
     description: 'No product permissions. Use this role to disable access without deleting data.',
@@ -187,18 +208,19 @@ const isEnvSuperAdmin = (email?: string | null) => {
   return adminEmailAllowlist().includes(email.toLowerCase());
 };
 
-const requireRbacAdmin = async (db: LobeChatDatabase, rbacModel: RbacModel, userId: string) => {
+const requireAnyPermission = async (
+  db: LobeChatDatabase,
+  rbacModel: RbacModel,
+  userId: string,
+  permissionCodes: string[],
+) => {
   await ensureDefaultRbac(db);
   await assignEnvSuperAdminRoles(db);
 
   const user = await getCurrentUser(db, userId);
   if (isEnvSuperAdmin(user.email)) return user;
 
-  const canManage = await rbacModel.hasAnyPermission([
-    RBAC_PERMISSIONS.RBAC_ROLE_READ_ALL,
-    RBAC_PERMISSIONS.RBAC_USER_ROLE_UPDATE_ALL,
-    RBAC_PERMISSIONS.USER_READ_ALL,
-  ]);
+  const canManage = await rbacModel.hasAnyPermission(permissionCodes);
 
   if (!canManage) {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Admin permission required' });
@@ -206,6 +228,14 @@ const requireRbacAdmin = async (db: LobeChatDatabase, rbacModel: RbacModel, user
 
   return user;
 };
+
+const requireRbacAdmin = async (db: LobeChatDatabase, rbacModel: RbacModel, userId: string) =>
+  requireAnyPermission(db, rbacModel, userId, [
+    RBAC_PERMISSIONS.RBAC_ROLE_READ_ALL,
+    RBAC_PERMISSIONS.RBAC_USER_ROLE_READ_ALL,
+    RBAC_PERMISSIONS.RBAC_USER_ROLE_UPDATE_ALL,
+    RBAC_PERMISSIONS.USER_READ_ALL,
+  ]);
 
 const assignEnvSuperAdminRoles = async (db: LobeChatDatabase) => {
   const emails = adminEmailAllowlist();
@@ -226,6 +256,20 @@ const assignEnvSuperAdminRoles = async (db: LobeChatDatabase) => {
     .insert(userRoles)
     .values(adminUsers.map((user) => ({ roleId: superAdminRole.id, userId: user.id })))
     .onConflictDoNothing();
+};
+
+const assignDefaultUserRole = async (db: LobeChatDatabase, userId: string) => {
+  const existingRole = await db.query.userRoles.findFirst({
+    where: eq(userRoles.userId, userId),
+  });
+  if (existingRole) return;
+
+  const defaultRole = await db.query.roles.findFirst({
+    where: eq(roles.name, DEFAULT_USER_ROLE),
+  });
+  if (!defaultRole) return;
+
+  await db.insert(userRoles).values({ roleId: defaultRole.id, userId }).onConflictDoNothing();
 };
 
 export const rbacAdminRouter = router({
@@ -250,7 +294,9 @@ export const rbacAdminRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      await requireRbacAdmin(ctx.serverDB, ctx.rbacModel, ctx.userId);
+      await requireAnyPermission(ctx.serverDB, ctx.rbacModel, ctx.userId, [
+        RBAC_PERMISSIONS.RBAC_ROLE_CREATE_ALL,
+      ]);
 
       const [role] = await ctx.serverDB
         .insert(roles)
@@ -288,7 +334,9 @@ export const rbacAdminRouter = router({
   deleteRole: rbacProcedure
     .input(z.object({ roleId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      await requireRbacAdmin(ctx.serverDB, ctx.rbacModel, ctx.userId);
+      await requireAnyPermission(ctx.serverDB, ctx.rbacModel, ctx.userId, [
+        RBAC_PERMISSIONS.RBAC_ROLE_DELETE_ALL,
+      ]);
 
       const role = await ctx.serverDB.query.roles.findFirst({
         where: eq(roles.id, input.roleId),
@@ -301,9 +349,12 @@ export const rbacAdminRouter = router({
 
       await ctx.serverDB.delete(roles).where(eq(roles.id, input.roleId));
       return { success: true };
-  }),
+    }),
 
   getCurrentPermissions: rbacProcedure.query(async ({ ctx }) => {
+    await ensureDefaultRbac(ctx.serverDB);
+    await assignEnvSuperAdminRoles(ctx.serverDB);
+
     const user = await getCurrentUser(ctx.serverDB, ctx.userId);
     if (isEnvSuperAdmin(user.email)) {
       return {
@@ -313,6 +364,8 @@ export const rbacAdminRouter = router({
         roles: [SUPER_ADMIN_ROLE],
       };
     }
+
+    await assignDefaultUserRole(ctx.serverDB, ctx.userId);
 
     const [permissionCodes, roleRows] = await Promise.all([
       ctx.rbacModel.getUserPermissions(),
@@ -396,7 +449,7 @@ export const rbacAdminRouter = router({
           ...user,
           isEnvSuperAdmin: isEnvSuperAdmin(user.email),
           roleIds: assignedRoleIds,
-          roles: assignedRoleIds.map((roleId) => rolesById.get(roleId)).filter(Boolean),
+          roles: assignedRoleIds.map((roleId) => rolesById.get(roleId)).filter(isDefined),
         };
       });
     }),
@@ -404,7 +457,9 @@ export const rbacAdminRouter = router({
   updateRolePermissions: rbacProcedure
     .input(z.object({ permissionIds: z.array(z.string()), roleId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      await requireRbacAdmin(ctx.serverDB, ctx.rbacModel, ctx.userId);
+      await requireAnyPermission(ctx.serverDB, ctx.rbacModel, ctx.userId, [
+        RBAC_PERMISSIONS.RBAC_ROLE_UPDATE_ALL,
+      ]);
 
       const role = await ctx.serverDB.query.roles.findFirst({
         where: eq(roles.id, input.roleId),
@@ -440,7 +495,9 @@ export const rbacAdminRouter = router({
   updateUserRoles: rbacProcedure
     .input(z.object({ roleIds: z.array(z.string()), userId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      await requireRbacAdmin(ctx.serverDB, ctx.rbacModel, ctx.userId);
+      await requireAnyPermission(ctx.serverDB, ctx.rbacModel, ctx.userId, [
+        RBAC_PERMISSIONS.RBAC_USER_ROLE_UPDATE_ALL,
+      ]);
 
       const targetUser = await ctx.serverDB.query.users.findFirst({
         where: eq(users.id, input.userId),

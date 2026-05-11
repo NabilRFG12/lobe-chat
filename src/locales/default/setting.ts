@@ -547,6 +547,9 @@ export default {
   'plugin.settings.tooltip': 'Skill Configuration',
   'plugin.store': 'Skill Store',
   'publishToCommunity': 'Publish to Community',
+  'rbac.denied.desc':
+    'Ask an administrator to add the required role or permission to your account.',
+  'rbac.denied.title': 'Access restricted',
   'settingAgent.avatar.sizeExceeded': 'Image size exceeds 1MB limit, please choose a smaller image',
   'settingAgent.avatar.title': 'Avatar',
   'settingAgent.backgroundColor.title': 'Background Color',

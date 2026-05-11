@@ -6,6 +6,7 @@ import type { TableColumnsType } from 'antd';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { RBAC_PERMISSIONS } from '@/const/rbac';
 import { lambdaQuery } from '@/libs/trpc/client';
 import SettingHeader from '@/routes/(main)/settings/features/SettingHeader';
 
@@ -81,6 +82,10 @@ const UsersSetting = memo(() => {
     [roles],
   );
 
+  const canAssignRoles =
+    !!access?.isEnvSuperAdmin ||
+    !!access?.permissions.includes(RBAC_PERMISSIONS.RBAC_USER_ROLE_UPDATE_ALL);
+
   const columns: TableColumnsType<UserRow> = [
     {
       dataIndex: 'email',
@@ -119,6 +124,7 @@ const UsersSetting = memo(() => {
       dataIndex: 'roleIds',
       render: (roleIds: string[], record) => (
         <Select
+          disabled={!canAssignRoles}
           mode="multiple"
           options={roleOptions}
           style={{ minWidth: 280, width: '100%' }}

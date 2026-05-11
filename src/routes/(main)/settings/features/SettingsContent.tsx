@@ -3,7 +3,9 @@
 import { Fragment, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import { getSettingsTabRequiredPermissions } from '@/const/rbacPolicies';
 import NavHeader from '@/features/NavHeader';
+import { PermissionGate } from '@/features/RBAC';
 import SettingContainer from '@/features/Setting/SettingContainer';
 import { SettingsTabs } from '@/store/global/initialState';
 import { serverConfigSelectors, useServerConfigStore } from '@/store/serverConfig';
@@ -55,7 +57,14 @@ const SettingsContent = ({ mobile, activeTab }: SettingsContentProps) => {
       componentProps.mobile = mobile;
     }
 
-    return <Component {...componentProps} />;
+    return (
+      <PermissionGate
+        debugId={`SettingsContent > ${tab}`}
+        requiredPermissions={getSettingsTabRequiredPermissions(tab)}
+      >
+        <Component {...componentProps} />
+      </PermissionGate>
+    );
   };
 
   if (activeTab && REDIRECT_MAP[activeTab]) return null;

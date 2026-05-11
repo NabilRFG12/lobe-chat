@@ -27,7 +27,8 @@ import {
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { lambdaQuery } from '@/libs/trpc/client';
+import { getSettingsTabRequiredPermissions } from '@/const/rbacPolicies';
+import { useRbacAccess } from '@/hooks/useRbacAccess';
 import { useElectronStore } from '@/store/electron';
 import { electronSyncSelectors } from '@/store/electron/selectors';
 import { SettingsTabs } from '@/store/global/initialState';
@@ -74,10 +75,7 @@ export const useCategory = () => {
   const remoteServerUrl = useElectronStore(electronSyncSelectors.remoteServerUrl);
   const isDevMode = useUserStore((s) => userGeneralSettingsSelectors.config(s).isDevMode);
   const enableMessenger = useUserStore(labPreferSelectors.enableMessenger);
-  const { data: rbacAccess } = lambdaQuery.rbacAdmin.getCurrentPermissions.useQuery(undefined, {
-    retry: false,
-    staleTime: 60_000,
-  });
+  const { canAccess } = useRbacAccess();
 
   const avatarUrl = useMemo(() => {
     if (!avatar) return undefined;
@@ -89,35 +87,41 @@ export const useCategory = () => {
   const enableBusinessFeatures = useServerConfigStore(serverConfigSelectors.enableBusinessFeatures);
   const categoryGroups: CategoryGroup[] = useMemo(() => {
     const groups: CategoryGroup[] = [];
+    const filterAllowedItems = (items: CategoryItem[]) =>
+      items.filter((item) =>
+        canAccess(getSettingsTabRequiredPermissions(item.key), { allowWhileLoading: true }),
+      );
 
     // General group
-    const generalItems: CategoryItem[] = [
-      {
-        icon: avatarUrl ? <Avatar avatar={avatarUrl} shape={'square'} size={26} /> : undefined,
-        key: SettingsTabs.Profile,
-        label: username || tAuth('tab.profile'),
-      },
-      {
-        icon: ChartColumnBigIcon,
-        key: SettingsTabs.Stats,
-        label: tAuth('tab.stats'),
-      },
-      {
-        icon: PaletteIcon,
-        key: SettingsTabs.Appearance,
-        label: t('tab.appearance'),
-      },
-      !mobile && {
-        icon: KeyboardIcon,
-        key: SettingsTabs.Hotkey,
-        label: t('tab.hotkey'),
-      },
-      enableBusinessFeatures && {
-        icon: BellIcon,
-        key: SettingsTabs.Notification,
-        label: t('tab.notification'),
-      },
-    ].filter(Boolean) as CategoryItem[];
+    const generalItems = filterAllowedItems(
+      [
+        {
+          icon: avatarUrl ? <Avatar avatar={avatarUrl} shape={'square'} size={26} /> : undefined,
+          key: SettingsTabs.Profile,
+          label: username || tAuth('tab.profile'),
+        },
+        {
+          icon: ChartColumnBigIcon,
+          key: SettingsTabs.Stats,
+          label: tAuth('tab.stats'),
+        },
+        {
+          icon: PaletteIcon,
+          key: SettingsTabs.Appearance,
+          label: t('tab.appearance'),
+        },
+        !mobile && {
+          icon: KeyboardIcon,
+          key: SettingsTabs.Hotkey,
+          label: t('tab.hotkey'),
+        },
+        enableBusinessFeatures && {
+          icon: BellIcon,
+          key: SettingsTabs.Notification,
+          label: t('tab.notification'),
+        },
+      ].filter(Boolean) as CategoryItem[],
+    );
 
     groups.push({
       items: generalItems,
@@ -127,134 +131,146 @@ export const useCategory = () => {
 
     // Subscription group
     if (enableBusinessFeatures) {
-      const subscriptionItems: CategoryItem[] = [
+      const subscriptionItems = filterAllowedItems([
         { icon: Map, key: SettingsTabs.Plans, label: tSubscription('tab.plans') },
         { icon: ChartColumnBigIcon, key: SettingsTabs.Usage, label: t('tab.usage') },
         { icon: Coins, key: SettingsTabs.Credits, label: tSubscription('tab.credits') },
         { icon: CreditCard, key: SettingsTabs.Billing, label: tSubscription('tab.billing') },
         { icon: Gift, key: SettingsTabs.Referral, label: tSubscription('tab.referral') },
-      ];
+      ]);
 
-      groups.push({
-        items: subscriptionItems,
-        key: SettingsGroupKey.Subscription,
-        title: t('group.subscription'),
-      });
+      if (subscriptionItems.length > 0) {
+        groups.push({
+          items: subscriptionItems,
+          key: SettingsGroupKey.Subscription,
+          title: t('group.subscription'),
+        });
+      }
     }
 
     // Agent group
-    const agentItems: CategoryItem[] = [
-      (!enableBusinessFeatures || isDevMode) && {
-        icon: Brain,
-        key: SettingsTabs.Provider,
-        label: t('tab.provider'),
-      },
-      {
-        icon: Sparkles,
-        key: SettingsTabs.ServiceModel,
-        label: t('tab.serviceModel'),
-      },
-      {
-        icon: SkillsIcon,
-        key: SettingsTabs.Skill,
-        label: t('tab.skill'),
-      },
-      {
-        icon: BrainCircuit,
-        key: SettingsTabs.Memory,
-        label: t('tab.memory'),
-      },
-      {
-        icon: KeyRound,
-        key: SettingsTabs.Creds,
-        label: t('tab.creds'),
-      },
-      showApiKeyManage && {
-        icon: KeyIcon,
-        key: SettingsTabs.APIKey,
-        label: tAuth('tab.apikey'),
-      },
-      // Gated by Labs → Messenger; the lab flag also controls whether the
-      // verify-im binding flow is reachable.
-      enableMessenger && {
-        icon: MessageCircleIcon,
-        key: SettingsTabs.Messenger,
-        label: t('tab.messenger'),
-      },
-    ].filter(Boolean) as CategoryItem[];
+    const agentItems = filterAllowedItems(
+      [
+        (!enableBusinessFeatures || isDevMode) && {
+          icon: Brain,
+          key: SettingsTabs.Provider,
+          label: t('tab.provider'),
+        },
+        {
+          icon: Sparkles,
+          key: SettingsTabs.ServiceModel,
+          label: t('tab.serviceModel'),
+        },
+        {
+          icon: SkillsIcon,
+          key: SettingsTabs.Skill,
+          label: t('tab.skill'),
+        },
+        {
+          icon: BrainCircuit,
+          key: SettingsTabs.Memory,
+          label: t('tab.memory'),
+        },
+        {
+          icon: KeyRound,
+          key: SettingsTabs.Creds,
+          label: t('tab.creds'),
+        },
+        showApiKeyManage && {
+          icon: KeyIcon,
+          key: SettingsTabs.APIKey,
+          label: tAuth('tab.apikey'),
+        },
+        // Gated by Labs → Messenger; the lab flag also controls whether the
+        // verify-im binding flow is reachable.
+        enableMessenger && {
+          icon: MessageCircleIcon,
+          key: SettingsTabs.Messenger,
+          label: t('tab.messenger'),
+        },
+      ].filter(Boolean) as CategoryItem[],
+    );
 
-    groups.push({
-      items: agentItems,
-      key: SettingsGroupKey.Agent,
-      title: t('group.aiConfig'),
-    });
-
-    if (rbacAccess?.isAdmin) {
+    if (agentItems.length > 0) {
       groups.push({
-        items: [
-          {
-            icon: UsersIcon,
-            key: SettingsTabs.Users,
-            label: t('tab.users'),
-          },
-          {
-            icon: ShieldCheck,
-            key: SettingsTabs.Roles,
-            label: t('tab.roles'),
-          },
-        ],
+        items: agentItems,
+        key: SettingsGroupKey.Agent,
+        title: t('group.aiConfig'),
+      });
+    }
+
+    const adminItems = filterAllowedItems([
+      {
+        icon: UsersIcon,
+        key: SettingsTabs.Users,
+        label: t('tab.users'),
+      },
+      {
+        icon: ShieldCheck,
+        key: SettingsTabs.Roles,
+        label: t('tab.roles'),
+      },
+    ]);
+
+    if (adminItems.length > 0) {
+      groups.push({
+        items: adminItems,
         key: SettingsGroupKey.Admin,
         title: t('group.admin'),
       });
     }
 
     // System group
-    const systemItems: CategoryItem[] = [
-      isDesktop && {
-        icon: EthernetPort,
-        key: SettingsTabs.Proxy,
-        label: t('tab.proxy'),
-      },
-      isDesktop && {
-        icon: TerminalSquare,
-        key: SettingsTabs.SystemTools,
-        label: t('tab.systemTools'),
-      },
-      {
-        icon: Database,
-        key: SettingsTabs.Storage,
-        label: t('tab.storage'),
-      },
-      isDevMode && {
-        icon: KeyIcon,
-        key: SettingsTabs.APIKey,
-        label: tAuth('tab.apikey'),
-      },
-      {
-        icon: EllipsisIcon,
-        key: SettingsTabs.Advanced,
-        label: t('tab.advanced'),
-      },
-      !hideDocs && {
-        icon: Info,
-        key: SettingsTabs.About,
-        label: t('tab.about'),
-      },
-    ].filter(Boolean) as CategoryItem[];
+    const systemItems = filterAllowedItems(
+      [
+        isDesktop && {
+          icon: EthernetPort,
+          key: SettingsTabs.Proxy,
+          label: t('tab.proxy'),
+        },
+        isDesktop && {
+          icon: TerminalSquare,
+          key: SettingsTabs.SystemTools,
+          label: t('tab.systemTools'),
+        },
+        {
+          icon: Database,
+          key: SettingsTabs.Storage,
+          label: t('tab.storage'),
+        },
+        isDevMode && {
+          icon: KeyIcon,
+          key: SettingsTabs.APIKey,
+          label: tAuth('tab.apikey'),
+        },
+        {
+          icon: EllipsisIcon,
+          key: SettingsTabs.Advanced,
+          label: t('tab.advanced'),
+        },
+        !hideDocs && {
+          icon: Info,
+          key: SettingsTabs.About,
+          label: t('tab.about'),
+        },
+      ].filter(Boolean) as CategoryItem[],
+    );
 
-    groups.push({
-      items: systemItems,
-      key: SettingsGroupKey.System,
-      title: t('group.system'),
-    });
+    if (systemItems.length > 0) {
+      groups.push({
+        items: systemItems,
+        key: SettingsGroupKey.System,
+        title: t('group.system'),
+      });
+    }
 
     return groups;
   }, [
     t,
     tAuth,
     tSubscription,
+    canAccess,
     enableBusinessFeatures,
-    rbacAccess?.isAdmin,
     hideDocs,
     mobile,
     showApiKeyManage,

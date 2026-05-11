@@ -7,6 +7,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { RBAC_PERMISSIONS } from '@/const/rbac';
 import { lambdaQuery } from '@/libs/trpc/client';
 import SettingHeader from '@/routes/(main)/settings/features/SettingHeader';
 
@@ -69,6 +70,9 @@ const RolesSetting = memo(() => {
     [permissions],
   );
 
+  const canManage = (permission: string) =>
+    !!access?.isEnvSuperAdmin || !!access?.permissions.includes(permission);
+
   const createRole = lambdaQuery.rbacAdmin.createRole.useMutation({
     onError: (error) => message.error(error.message),
     onSuccess: async () => {
@@ -117,7 +121,9 @@ const RolesSetting = memo(() => {
       dataIndex: 'permissionIds',
       render: (permissionIds: string[], record) => (
         <Select
-          disabled={record.name === 'super_admin'}
+          disabled={
+            record.name === 'super_admin' || !canManage(RBAC_PERMISSIONS.RBAC_ROLE_UPDATE_ALL)
+          }
           mode="multiple"
           options={permissionOptions}
           placeholder="Select permissions"
@@ -136,7 +142,7 @@ const RolesSetting = memo(() => {
     {
       render: (_, record) => (
         <Button
-          disabled={record.isSystem}
+          disabled={record.isSystem || !canManage(RBAC_PERMISSIONS.RBAC_ROLE_DELETE_ALL)}
           icon={<Icon icon={Trash2} />}
           type="text"
           onClick={() => deleteRole.mutate({ roleId: record.id })}
@@ -171,7 +177,11 @@ const RolesSetting = memo(() => {
       <SettingHeader
         title={t('tab.roles')}
         extra={
-          <Button icon={<Icon icon={Plus} />} onClick={() => setCreateOpen(true)}>
+          <Button
+            disabled={!canManage(RBAC_PERMISSIONS.RBAC_ROLE_CREATE_ALL)}
+            icon={<Icon icon={Plus} />}
+            onClick={() => setCreateOpen(true)}
+          >
             Create role
           </Button>
         }

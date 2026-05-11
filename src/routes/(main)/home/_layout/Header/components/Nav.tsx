@@ -5,10 +5,12 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 
-import { type NavItemProps } from '@/features/NavPanel/components/NavItem';
+import { getNavRequiredPermissions } from '@/const/rbacPolicies';
+import type { NavItemProps } from '@/features/NavPanel/components/NavItem';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import { useActiveTabKey } from '@/hooks/useActiveTabKey';
 import { useNavLayout } from '@/hooks/useNavLayout';
+import { useRbacAccess } from '@/hooks/useRbacAccess';
 import { isModifierClick } from '@/utils/navigation';
 import { prefetchRoute } from '@/utils/router';
 
@@ -20,6 +22,7 @@ const Nav = memo(() => {
   const navigate = useNavigate();
   const { t } = useTranslation('common');
   const { topNavItems: items } = useNavLayout();
+  const { canAccess } = useRbacAccess();
 
   const newBadge = (
     <Tag color="blue" size="small">
@@ -30,7 +33,12 @@ const Nav = memo(() => {
   return (
     <Flexbox gap={1} paddingInline={4}>
       {items
-        .filter((item) => HEADER_KEYS.has(item.key) && !item.hidden)
+        .filter(
+          (item) =>
+            HEADER_KEYS.has(item.key) &&
+            !item.hidden &&
+            canAccess(getNavRequiredPermissions(item.key), { allowWhileLoading: true }),
+        )
         .map((item) => {
           const extra = item.isNew ? newBadge : undefined;
 
