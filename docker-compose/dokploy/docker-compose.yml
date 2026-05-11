@@ -2,7 +2,7 @@ name: lobehub
 
 services:
   lobe:
-    image: ${LOBE_IMAGE:-ghcr.io/nabilrfg12/lobe-chat:dokploy-self-hosting}
+    image: ${LOBE_IMAGE:-ghcr.io/nabilrfg12/lobe-chat:latest}
     pull_policy: always
     depends_on:
       postgresql:
@@ -21,6 +21,7 @@ services:
       AUTH_TRUSTED_ORIGINS: ${AUTH_TRUSTED_ORIGINS:-${APP_URL}}
       AUTH_ALLOWED_EMAILS: ${AUTH_ALLOWED_EMAILS:-}
       AUTH_DISABLE_EMAIL_PASSWORD: ${AUTH_DISABLE_EMAIL_PASSWORD:-}
+      APP_SUPER_ADMIN_EMAILS: ${APP_SUPER_ADMIN_EMAILS:-}
       JWKS_KEY: ${JWKS_KEY}
       DATABASE_DRIVER: node
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgresql:5432/${LOBE_DB_NAME}

@@ -17,12 +17,14 @@ import Messenger from '../messenger';
 import Profile from '../profile';
 import Provider from '../provider';
 import Proxy from '../proxy';
+import Roles from '../roles';
 import Security from '../security';
 import ServiceModel from '../service-model';
 import Skill from '../skill';
 import Stats from '../stats';
 import Storage from '../storage';
 import SystemTools from '../system-tools';
+import Users from '../users';
 
 export const componentMap = {
   [SettingsTabs.Advanced]: Advanced,
@@ -45,6 +47,8 @@ export const componentMap = {
   [SettingsTabs.Creds]: Creds,
   [SettingsTabs.Security]: Security,
   [SettingsTabs.Skill]: Skill,
+  [SettingsTabs.Users]: Users,
+  [SettingsTabs.Roles]: Roles,
 
   [SettingsTabs.Plans]: Plans,
   [SettingsTabs.Credits]: Credits,

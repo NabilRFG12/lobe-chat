@@ -68,6 +68,12 @@ export const componentMap = {
   [SettingsTabs.Skill]: dynamic(() => import('../skill'), {
     loading: loading('Settings > Skill'),
   }),
+  [SettingsTabs.Users]: dynamic(() => import('../users'), {
+    loading: loading('Settings > Users'),
+  }),
+  [SettingsTabs.Roles]: dynamic(() => import('../roles'), {
+    loading: loading('Settings > Roles'),
+  }),
 
   [SettingsTabs.Plans]: dynamic(() => import('@/business/client/BusinessSettingPages/Plans'), {
     loading: loading('Settings > Plans'),

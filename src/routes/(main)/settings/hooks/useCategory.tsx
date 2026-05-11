@@ -19,12 +19,15 @@ import {
   Map,
   MessageCircleIcon,
   PaletteIcon,
+  ShieldCheck,
   Sparkles,
   TerminalSquare,
+  UsersIcon,
 } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { lambdaQuery } from '@/libs/trpc/client';
 import { useElectronStore } from '@/store/electron';
 import { electronSyncSelectors } from '@/store/electron/selectors';
 import { SettingsTabs } from '@/store/global/initialState';
@@ -40,6 +43,7 @@ import { userGeneralSettingsSelectors } from '@/store/user/slices/settings/selec
 
 export enum SettingsGroupKey {
   Agent = 'agent',
+  Admin = 'admin',
   General = 'general',
   Subscription = 'subscription',
   System = 'system',
@@ -70,6 +74,10 @@ export const useCategory = () => {
   const remoteServerUrl = useElectronStore(electronSyncSelectors.remoteServerUrl);
   const isDevMode = useUserStore((s) => userGeneralSettingsSelectors.config(s).isDevMode);
   const enableMessenger = useUserStore(labPreferSelectors.enableMessenger);
+  const { data: rbacAccess } = lambdaQuery.rbacAdmin.getCurrentPermissions.useQuery(undefined, {
+    retry: false,
+    staleTime: 60_000,
+  });
 
   const avatarUrl = useMemo(() => {
     if (!avatar) return undefined;
@@ -181,6 +189,25 @@ export const useCategory = () => {
       title: t('group.aiConfig'),
     });
 
+    if (rbacAccess?.isAdmin) {
+      groups.push({
+        items: [
+          {
+            icon: UsersIcon,
+            key: SettingsTabs.Users,
+            label: t('tab.users'),
+          },
+          {
+            icon: ShieldCheck,
+            key: SettingsTabs.Roles,
+            label: t('tab.roles'),
+          },
+        ],
+        key: SettingsGroupKey.Admin,
+        title: t('group.admin'),
+      });
+    }
+
     // System group
     const systemItems: CategoryItem[] = [
       isDesktop && {
@@ -227,6 +254,7 @@ export const useCategory = () => {
     tAuth,
     tSubscription,
     enableBusinessFeatures,
+    rbacAccess?.isAdmin,
     hideDocs,
     mobile,
     showApiKeyManage,
