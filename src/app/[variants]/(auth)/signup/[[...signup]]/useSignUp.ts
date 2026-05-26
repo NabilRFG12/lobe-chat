@@ -49,13 +49,14 @@ export const useSignUp = () => {
       }
 
       const callbackUrl = searchParams.get('callbackUrl') || '/';
-      const username = values.email.split('@')[0];
+      const normalizedEmail = values.email.trim().toLowerCase();
+      const username = normalizedEmail.split('@')[0];
       const fetchOptions = await getFetchOptions();
 
       const submit = async (nextFetchOptions?: AuthFetchOptions) =>
         signUp.email({
           callbackURL: callbackUrl,
-          email: values.email,
+          email: normalizedEmail,
           fetchOptions: nextFetchOptions,
           name: username,
           password: values.password,
@@ -96,7 +97,7 @@ export const useSignUp = () => {
 
       if (enableEmailVerification) {
         router.push(
-          `/verify-email?email=${encodeURIComponent(values.email)}&callbackUrl=${encodeURIComponent(callbackUrl)}`,
+          `/verify-email?email=${encodeURIComponent(normalizedEmail)}&callbackUrl=${encodeURIComponent(callbackUrl)}`,
         );
       } else {
         router.push(callbackUrl);

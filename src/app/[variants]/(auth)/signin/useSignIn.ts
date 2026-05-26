@@ -37,6 +37,9 @@ export const useSignIn = () => {
   const disableEmailPassword = useAuthServerConfigStore(
     (s) => s.serverConfig.disableEmailPassword || false,
   );
+  const disablePublicSignup = useAuthServerConfigStore(
+    (s) => s.serverConfig.disablePublicSignup || false,
+  );
   const [form] = Form.useForm<SignInFormValues>();
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<string | null>(null);
@@ -137,6 +140,12 @@ export const useSignIn = () => {
       if (!data.exists) {
         if (identifierType === 'username') {
           message.error(t('betterAuth.errors.usernameNotRegistered'));
+          return;
+        }
+        // When public signup is disabled, /signup redirects back to /signin,
+        // which would trap the user in a loop. Show a clear message instead.
+        if (disablePublicSignup) {
+          message.error(t('betterAuth.errors.noAccountContactAdmin'));
           return;
         }
         const callbackUrl = searchParams.get('callbackUrl') || '/';
