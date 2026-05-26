@@ -14,14 +14,7 @@ export const NAV_PERMISSION_REQUIREMENTS: Partial<
   [SidebarTabKey.Tasks]: [APP_PERMISSIONS.TASKS],
   [SidebarTabKey.Video]: [APP_PERMISSIONS.VIDEO_GENERATION],
   agent: [APP_PERMISSIONS.CHAT],
-  community: [APP_PERMISSIONS.COMMUNITY],
-  image: [APP_PERMISSIONS.IMAGE_GENERATION],
-  memory: [APP_PERMISSIONS.MEMORY],
-  pages: [APP_PERMISSIONS.PAGES],
   recents: [APP_PERMISSIONS.CHAT],
-  resource: [APP_PERMISSIONS.RESOURCE],
-  tasks: [APP_PERMISSIONS.TASKS],
-  video: [APP_PERMISSIONS.VIDEO_GENERATION],
 };
 
 export const SETTINGS_PERMISSION_REQUIREMENTS: Partial<Record<SettingsTabs, readonly string[]>> = {

@@ -264,7 +264,7 @@ export function defineConfig(customOptions: CustomBetterAuthOptions) {
       ...customOptions.plugins,
       emailWhitelist(),
       expo(),
-      emailHarmony({ allowNormalizedSignin: false, validator: customEmailValidator }),
+      emailHarmony({ allowNormalizedSignin: true, validator: customEmailValidator }),
       admin(),
       // Email OTP plugin for mobile verification
       emailOTP({

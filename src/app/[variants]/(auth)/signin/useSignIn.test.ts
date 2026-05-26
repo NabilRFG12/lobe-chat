@@ -62,16 +62,18 @@ vi.mock('@/business/client/hooks/useBusinessSignin', () => ({
   }),
 }));
 
+const mockAuthServerState = vi.hoisted(() => ({
+  serverConfig: {
+    disableEmailPassword: false,
+    disablePublicSignup: false,
+    enableMagicLink: false,
+    oAuthSSOProviders: ['google', 'github'],
+  } as Record<string, any>,
+  serverConfigInit: true,
+}));
+
 vi.mock('../_layout/AuthServerConfigProvider', () => ({
-  useAuthServerConfigStore: (selector: (s: any) => any) =>
-    selector({
-      serverConfig: {
-        disableEmailPassword: false,
-        enableMagicLink: false,
-        oAuthSSOProviders: ['google', 'github'],
-      },
-      serverConfigInit: true,
-    }),
+  useAuthServerConfigStore: (selector: (s: any) => any) => selector(mockAuthServerState),
 }));
 
 // Mock antd Form.useForm
@@ -107,6 +109,7 @@ describe('useSignIn', () => {
     vi.clearAllMocks();
     mockLocalStorage.clear();
     mockSearchParamsGet.mockReturnValue(null);
+    mockAuthServerState.serverConfig.disablePublicSignup = false;
   });
 
   afterEach(() => {
@@ -142,6 +145,23 @@ describe('useSignIn', () => {
       expect(mockPush).toHaveBeenCalledWith(
         expect.stringContaining('/signup?email=new%40example.com'),
       );
+    });
+
+    it('should show error instead of redirecting to signup when public signup is disabled', async () => {
+      mockAuthServerState.serverConfig.disablePublicSignup = true;
+      mockFetch.mockResolvedValueOnce({
+        json: async () => ({ exists: false }),
+        ok: true,
+      });
+
+      const { result } = renderHook(() => useSignIn());
+
+      await act(async () => {
+        await result.current.handleCheckUser({ email: 'new@example.com' });
+      });
+
+      expect(mockMessageError).toHaveBeenCalled();
+      expect(mockPush).not.toHaveBeenCalled();
     });
 
     it('should go to password step when user exists with password', async () => {

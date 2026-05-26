@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { type NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
         id: users.id,
       })
       .from(users)
-      .where(eq(users.email, email.toLowerCase().trim()))
+      .where(sql`lower(${users.email}) = ${email.toLowerCase().trim()}`)
       .limit(1);
 
     if (!user) {

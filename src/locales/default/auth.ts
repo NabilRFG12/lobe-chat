@@ -43,6 +43,8 @@ export default {
   'betterAuth.errors.firstNameRequired': 'Please enter your first name',
   'betterAuth.errors.lastNameRequired': 'Please enter your last name',
   'betterAuth.errors.loginFailed': 'Login failed, please check your email and password',
+  'betterAuth.errors.noAccountContactAdmin':
+    'No account found for this email. Please ask the administrator to create one for you.',
   'betterAuth.errors.passwordFormat': 'Password must contain both letters and numbers',
   'betterAuth.errors.passwordMaxLength': 'Password must not exceed 64 characters',
   'betterAuth.errors.passwordMinLength': 'Password must be at least 8 characters',

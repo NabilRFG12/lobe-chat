@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import { type NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     const [user] = await serverDB
       .select({ email: users.email })
       .from(users)
-      .where(eq(users.username, normalizedUsername))
+      .where(sql`lower(${users.username}) = ${normalizedUsername.toLowerCase()}`)
       .limit(1);
 
     if (!user || !user.email) {
